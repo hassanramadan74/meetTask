@@ -1,101 +1,145 @@
-import Image from "next/image";
+"use client";
+import Image from 'next/image';
+import React, { useState, useEffect } from 'react';
+import Cookies from 'js-cookie';
+import { useRouter } from 'next/navigation';
 
-export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+interface LoginData {
+  email: string;
+  password: string;
+  isEmployee: boolean;
 }
+
+const Home = () => {
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [isButtonDisabled, setIsButtonDisabled] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
+const router = useRouter();
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  useEffect(() => {
+    if (validateEmail(email) && password) {
+      setIsButtonDisabled(false);
+    } else {
+      setIsButtonDisabled(true);
+    }
+  }, [email, password]);
+
+  const handleLogin = async () => {
+    setLoading(true);
+    setError('');
+  
+    const loginData: LoginData = {
+      email,
+      password,
+      isEmployee: true,
+    };
+  
+    try {
+      const response = await fetch('https://api-yeshtery.dev.meetusvr.com/v1/yeshtery/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(loginData),
+      });
+  
+      const data = await response.json();
+  
+      if (response.ok) {
+        console.log('Login successful:', data);
+        console.log('Token:', data.token);
+  
+        Cookies.set('token', data.token, { expires: 7, path: '' }); // 7 days expiry
+        Cookies.set('email', email, { expires: 7, path: '' }); // Save email too, if needed
+        Cookies.set('password', password, { expires: 7, path: '' }); // Save password securely (for demo)
+  
+        router.push('/dashboard');
+        setLoading(false);
+      } else {
+        setError(data.message || 'Something went wrong. Please try again.');
+      }
+    } catch (error) {
+      setError(`An error occurred. Please try again later. ${error}`);
+    }
+  };
+  
+
+  return (
+    <>
+      <div className="bg-gradient-to-l from-[#e0d8fc] via-[#f1d6fc] to-[#e2edfd]">
+        <div className="container mx-auto lg:h-screen h-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
+            {/* Left Section */}
+            <div className="flex flex-col items-center justify-center col-span-1 px-14 lg:py-0 py-10">
+              <h1 className="text-5xl font-medium text-center mb-4 font-mono">Welcome Back</h1>
+              <p className="text-center text-base text-[#62626b] mb-8">
+                Step Into Our Shopping Metaverse for an unforgettable shopping experience
+              </p>
+              <div className="space-y-4 w-full">
+                <div className="relative w-full">
+                  <i className="fa-regular fa-envelope absolute top-1/2 left-4 transform -translate-y-1/2 text-[#62626b]"></i>
+                  <input
+                    type="text"
+                    placeholder="Email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full border border-white pl-12 p-4 bg-[#efeff9] rounded-lg focus:outline-none placeholder:text-[#62626b]"
+                  />
+                </div>
+                <div className="relative w-full">
+                  <i className="fas fa-lock absolute top-1/2 left-4 transform -translate-y-1/2 text-[#62626b]"></i>
+                  <input
+                    type="password"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full border border-white pl-12 p-4 bg-[#efeff9] rounded-lg focus:outline-none placeholder:text-[#62626b]"
+                  />
+                </div>
+              </div>
+              <div className="w-full">
+                <button
+                  onClick={handleLogin}
+                  disabled={isButtonDisabled || loading}
+                  className={`w-full py-3 rounded-lg mt-8 ${
+                    isButtonDisabled || loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#9414FF] text-white'
+                  }`}
+                >
+                  {loading ? 'Logging In...' : 'Login'}
+                </button>
+              </div>
+              {error && (
+                <p className="text-red-500 text-center mt-4">{error}</p> // Display error message
+              )}
+              <div>
+                <p className="text-center text-[#62626b] mt-8">
+                  Don&apos;t have an account? <span className="text-[#9414FF]">Sign Up</span>
+                </p>
+              </div>
+            </div>
+            {/* Right Section */}
+            <div className="col-span-2 flex flex-col items-center justify-center">
+              <div>
+                <Image src="/icon.png" alt="first icon" width={700} height={280} quality={100} />
+              </div>
+              <div className="mb-24">
+                <h1 className="text-5xl font-mono font-medium flex items-center space-x-1">
+                  <span className="tracking-tighter text-7xl">meetus</span>
+                  <sup className="text-2xl font-sans tracking-wider">VR</sup>
+                </h1>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default Home;
